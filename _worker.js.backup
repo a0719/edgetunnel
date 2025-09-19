@@ -1,5 +1,5 @@
 ﻿
-import { connect } from 'cloudflare:sockets';   
+import { connect } from 'cloudflare:sockets';
 
 let userID = '';
 let proxyIP = '';
@@ -7177,4 +7177,5 @@ function config_Html(token = "test", proxyhost = "") {
     return html;
 
 }
+
 
