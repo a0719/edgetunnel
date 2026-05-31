@@ -1,9 +1,9 @@
-name: 混淆_worker.js源码
+name: 混淆_worker.js源码joy
 
-on:
+于:
   workflow_dispatch:
   push:
-    branches:
+    分支:
       - '**'  # 仅匹配分支推送，排除标签推送
     paths:
       - '_worker.js'
