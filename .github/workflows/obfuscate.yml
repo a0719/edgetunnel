@@ -1,4 +1,4 @@
-name: Generate and Obfuscate Worker Script
+name: 混淆_worker.js源码
 
 on:
   workflow_dispatch:
