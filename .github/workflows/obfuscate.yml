@@ -1,4 +1,4 @@
-name: 混淆_worker.js源码joy
+name: 混淆_worker.js源码
 
 于:
   workflow_dispatch:
