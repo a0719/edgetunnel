@@ -1,0 +1,90 @@
+name: 混淆最新版本源码并生成 HX_worker.js
+on:
+  workflow_dispatch:
+
+jobs:
+  obfuscate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 使用 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: 加载最新源码
+        run: |
+          curl -o 明文源码.js https://raw.githubusercontent.com/cmliu/edgetunnel/main/_worker.js
+          if [ ! -s 明文源码.js ]; then
+            echo "下载源码失败"
+            exit 1
+          fi
+
+      - name: 安装混淆工具
+        run: npm install -g javascript-obfuscator@latest
+
+      - name: 混淆代码并生成 HX_worker.js
+        run: |
+          javascript-obfuscator 明文源码.js --output HX_worker.js \
+          --compact true \
+          --control-flow-flattening true \
+          --control-flow-flattening-threshold 0.75 \
+          --dead-code-injection true \
+          --dead-code-injection-threshold 0.4 \
+          --identifier-names-generator hexadecimal \
+          --rename-globals true \
+          --string-array true \
+          --string-array-encoding 'rc4' \
+          --string-array-threshold 0.75 \
+          --transform-object-keys true \
+          --unicode-escape-sequence true \
+          --self-defending true \
+          --debug-protection true
+
+      - name: 检查混淆结果
+        run: |
+          if [ ! -s "HX_worker.js" ] || [ "$(wc -c < HX_worker.js)" -eq 0 ]; then
+            echo "混淆后文件为空或损坏"
+            exit 1
+          fi
+          
+          ORIGINAL_SIZE=$(wc -c < 明文源码.js)
+          OBFUSCATED_SIZE=$(wc -c < HX_worker.js)
+          echo "原始大小: $ORIGINAL_SIZE bytes"
+          echo "混淆后大小: $OBFUSCATED_SIZE bytes"
+          
+          if [ "$OBFUSCATED_SIZE" -lt $((ORIGINAL_SIZE / 2)) ]; then
+            echo "警告：混淆后文件大小异常小"
+            exit 1
+          fi
+
+      - name: 提交更改
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if [ -f "HX_worker.js" ]; then
+            git add HX_worker.js
+            git commit -m "自动化：生成混淆后的 HX_worker.js 文件
+            - 从 cmliu/edgetunnel 获取最新源码
+            - 应用代码混淆保护
+            - 生成 HX_worker.js 文件"
+            echo "CHANGES_COMMITTED=true" >> $GITHUB_ENV
+          else
+            echo "CHANGES_COMMITTED=false" >> $GITHUB_ENV
+            echo "HX_worker.js 文件不存在"
+          fi
+
+      - name: 推送更改
+        if: env.CHANGES_COMMITTED == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref_name }}
+          tags: false
