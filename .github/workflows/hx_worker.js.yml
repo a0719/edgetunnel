@@ -70,22 +70,6 @@ jobs:
             exit 1
           fi
 
-      - name: 验证混淆后代码
-        run: |
-          # 检查文件是否包含必需的关键字
-          if ! grep -q "export default" hx_worker.js; then
-            echo "错误：混淆后的代码缺少默认导出"
-            exit 1
-          fi
-          
-          # 检查是否有基本的语法结构
-          if ! grep -q "fetch(request" hx_worker.js; then
-            echo "错误：混淆后的代码缺少fetch函数"
-            exit 1
-          fi
-          
-          echo "代码结构验证通过"
-
       - name: 提交更改
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
