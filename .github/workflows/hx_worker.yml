@@ -38,10 +38,7 @@ jobs:
           node-version: "18"
 
       - name: 安装混淆工具
-        run: |
-          npm install -g javascript-obfuscator@latest
-          # 检查安装版本
-          javascript-obfuscator --version
+        run: npm install -g javascript-obfuscator@latest
 
       - name: 混淆 _worker.js 文件并生成 hx_worker.js
         run: |
@@ -59,9 +56,7 @@ jobs:
           --transform-object-keys true \
           --unicode-escape-sequence true \
           --self-defending true \
-          --debug-protection true \
-          --split-strings true \
-          --split-strings-chunk-length 3
+          --debug-protection true
 
       - name: 检查混淆结果
         run: |
