@@ -38,24 +38,28 @@ jobs:
           node-version: "18"
 
       - name: 安装混淆工具
-        run: npm install -g javascript-obfuscator@latest
+        run: |
+          npm install -g javascript-obfuscator@latest
+          # 检查安装版本
+          javascript-obfuscator --version
 
       - name: 混淆 _worker.js 文件并生成 hx_worker.js
         run: |
           javascript-obfuscator _worker.js --output hx_worker.js \
           --compact true \
-          --control-flow-flattening false \
-          --dead-code-injection false \
+          --control-flow-flattening true \
+          --control-flow-flattening-threshold 0.75 \
+          --dead-code-injection true \
+          --dead-code-injection-threshold 0.4 \
           --identifier-names-generator hexadecimal \
-          --rename-globals false \
+          --rename-globals true \
           --string-array true \
-          --string-array-encoding 'base64' \
+          --string-array-encoding 'rc4' \
           --string-array-threshold 0.75 \
-          --transform-object-keys false \
+          --transform-object-keys true \
           --unicode-escape-sequence true \
-          --self-defending false \
-          --debug-protection false \
-          --ignore-native-code false \
+          --self-defending true \
+          --debug-protection true \
           --split-strings true \
           --split-strings-chunk-length 3
 
@@ -65,6 +69,22 @@ jobs:
             echo "混淆后文件为空或损坏"
             exit 1
           fi
+
+      - name: 验证混淆后代码
+        run: |
+          # 检查文件是否包含必需的关键字
+          if ! grep -q "export default" hx_worker.js; then
+            echo "错误：混淆后的代码缺少默认导出"
+            exit 1
+          fi
+          
+          # 检查是否有基本的语法结构
+          if ! grep -q "fetch(request" hx_worker.js; then
+            echo "错误：混淆后的代码缺少fetch函数"
+            exit 1
+          fi
+          
+          echo "代码结构验证通过"
 
       - name: 提交更改
         run: |
