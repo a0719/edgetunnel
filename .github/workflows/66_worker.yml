@@ -1,8 +1,8 @@
 name: 混淆Worker JS文件
 
-on:
+于:
   push:
-    branches:
+    分支:
       - main
     paths:
       - '_worker.js'
@@ -64,7 +64,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add hx_worker.js
         if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "Add obfuscated worker file hx_worker.js [skip ci]"
+          git commit -m "混淆后的文件11_worker.js"
           git push
         else
           echo "No changes to commit"
