@@ -1,0 +1,118 @@
+name: 定时混淆并生成 hx_worker.js
+on:
+  schedule:
+    # 每天凌晨 2:00 执行一次任务
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  obfuscate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 检查 _worker.js 文件是否存在
+        run: |
+          if [ ! -f "_worker.js" ]; then
+            echo "错误：仓库根目录中未找到 '_worker.js' 文件"
+            echo "请确保仓库中包含 '_worker.js' 文件后再运行此工作流"
+            exit 1
+          fi
+          echo "找到 _worker.js 文件，继续执行..."
+
+      - name: 检查并删除现有的 hx_worker.js 文件
+        run: |
+          if [ -f "hx_worker.js" ]; then
+            echo "发现现有的 hx_worker.js 文件，正在删除..."
+            rm hx_worker.js
+            echo "已删除旧的 hx_worker.js 文件"
+          else
+            echo "未发现 hx_worker.js 文件，继续执行..."
+          fi
+
+      - name: 使用 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: 安装混淆工具
+        run: |
+          npm install -g javascript-obfuscator@latest
+          # 检查安装版本
+          javascript-obfuscator --version
+
+      - name: 混淆 _worker.js 文件并生成 hx_worker.js
+        run: |
+          javascript-obfuscator _worker.js --output hx_worker.js \
+          --compact true \
+          --control-flow-flattening true \
+          --control-flow-flattening-threshold 0.75 \
+          --dead-code-injection true \
+          --dead-code-injection-threshold 0.4 \
+          --identifier-names-generator hexadecimal \
+          --rename-globals true \
+          --string-array true \
+          --string-array-encoding 'base64' \
+          --string-array-threshold 0.75 \
+          --transform-object-keys true \
+          --unicode-escape-sequence true \
+          --self-defending false \
+          --debug-protection false \
+          --split-strings true \
+          --split-strings-chunk-length 3 \
+          --numbers-to-expressions true \
+          --string-array-index-shift true \
+          --string-array-wrap-calls true \
+          --reserved-strings '^fetch$|^Response$|^Request$|^Headers$|^URL$|^addEventListener$|^WebSocket$|^console$|^export$|^default$|^addEventListener$|^removeEventListener$|^postMessage$|^importScripts$|^atob$|^btoa$|^clearInterval$|^clearTimeout$|^setInterval$|^setTimeout$|^queueMicrotask$|^structuredClone$|^crypto$|^navigator$|^location$|^document$' \
+          --reserved-names '^env$|^globalThis$|^__dirname$|^__filename$|^exports$|^module$|^self$|^global$|^window$|^process$|^Buffer$|^require$|^console$|^Error$|^Array$|^Object$|^String$|^Number$|^Boolean$|^Date$|^RegExp$|^Function$|^Symbol$|^Map$|^Set$|^WeakMap$|^WeakSet$|^Promise$|^Proxy$|^Reflect$'
+
+      - name: 检查混淆结果
+        run: |
+          if [ ! -s "hx_worker.js" ] || [ "$(wc -c < hx_worker.js)" -eq 0 ]; then
+            echo "混淆后文件为空或损坏"
+            exit 1
+          fi
+          
+          # 检查文件编码
+          file -bi hx_worker.js
+          
+          # 显示文件大小
+          echo "混淆后文件大小: $(wc -c < hx_worker.js) 字节"
+          
+          # 验证混淆效果 - 检查是否还有明显的变量名
+          echo "检查混淆完整性..."
+          if grep -E '\b[a-zA-Z_][a-zA-Z0-9_]{2,}\b' hx_worker.js | grep -vE 'fetch|Response|Request|Headers|URL|addEventListener|WebSocket|console|export|default' | head -5; then
+            echo "发现可能未混淆的变量名"
+          else
+            echo "变量名混淆检查完成"
+          fi
+
+      - name: 提交更改
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if [ -f "hx_worker.js" ]; then
+            git add hx_worker.js
+            git commit -m "自动化：生成混淆后的 hx_worker.js 文件
+            - 原始文件: _worker.js (保留)
+            - 混淆文件: hx_worker.js
+            - 已启用更全面的混淆选项以提高代码安全性"
+            echo "CHANGES_COMMITTED=true" >> $GITHUB_ENV
+          else
+            echo "CHANGES_COMMITTED=false" >> $GITHUB_ENV
+            echo "hx_worker.js 文件不存在"
+          fi
+
+      - name: 推送更改
+        if: env.CHANGES_COMMITTED == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref_name }}
+          tags: false
