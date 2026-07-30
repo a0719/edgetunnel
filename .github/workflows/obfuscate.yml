@@ -53,7 +53,7 @@ jobs:
               controlFlowFlatteningThreshold: 0,
               deadCodeInjection: false,
               stringArray: true,
-              stringArrayEncoding: ['base64'],
+              stringArrayEncoding: ['rc4'],
               stringArrayThreshold: 1.0,
               stringArrayRotate: true,
               stringArrayShuffle: true,
